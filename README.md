@@ -39,7 +39,7 @@ A modern, responsive todo list application built with React and Material-UI, fea
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/YoATW9/ToDo-List.git
 cd todo-list
 ```
 
