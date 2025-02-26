@@ -13,20 +13,22 @@ A modern, responsive todo list application built with React and Material-UI, fea
   - Create, edit, and delete tasks
   - Set task priority (Low, Medium, High)
   - Add due dates and times
-  - Categorize tasks (Personal, Work, Shopping, etc.)
+  - Manage categories through a dedicated interface
   - Track task status (Todo, In Progress, Blocked, Completed)
+  - Smart category management with task reassignment
 
 - **Views**
-  - Monthly calendar view
-  - Daily list view
-  - Upcoming tasks view
-  - Notifications for due tasks
+  - Interactive monthly calendar view with correct date display
+  - Daily list view with filtering and sorting
+  - Upcoming tasks view with priority indicators
+  - Category-based filtering and search
   - Progress tracking and statistics
 
 - **Data Persistence**
-  - Local storage for tasks and preferences
-  - Automatic saving of changes
-  - Persistent language settings
+  - Local storage for tasks, categories, and preferences
+  - Automatic saving of all changes
+  - Persistent language and category settings
+  - Safe category deletion with task reassignment
 
 ## Getting Started
 

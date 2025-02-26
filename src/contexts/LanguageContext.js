@@ -36,14 +36,22 @@ const translations = {
     later: 'Later',
     upcomingTasks: 'Upcoming Tasks',
     notifications: 'Notifications',
-    yourProgress: 'Your Progress',
+    yourProgress: 'My Progress',
     completionRate: 'Completion Rate',
     tasksCompleted: 'Tasks Completed',
     tasksPending: 'Tasks Pending',
     mostProductiveDay: 'Most Productive Day',
     recentActivity: 'Recent Activity',
+    settings: 'Settings',
+    language: 'Language',
+    darkMode: 'Dark Mode',
+    dark: 'Dark',
+    light: 'Light',
+    close: 'Close',
+    tasks: 'Tasks',
+    all: 'All',
   },
-  'zh-tw': {
+  'ZH-TW': {
     addTask: '新增任務',
     updateTask: '更新任務',
     title: '標題',
@@ -84,6 +92,14 @@ const translations = {
     tasksPending: '待處理任務',
     mostProductiveDay: '最高效的一天',
     recentActivity: '最近活動',
+    settings: '設定',
+    language: '語言',
+    darkMode: '深色模式',
+    dark: '深色',
+    light: '淺色',
+    close: '關閉',
+    tasks: '任務',
+    all: '全部',
   }
 };
 
@@ -100,19 +116,20 @@ export const useLanguage = () => {
 export const LanguageProvider = ({ children }) => {
   const [language, setLanguage] = useState(() => {
     const savedLanguage = localStorage.getItem('language');
-    return savedLanguage || 'EN';
+    return savedLanguage ? savedLanguage.toUpperCase() : 'EN';
   });
 
   useEffect(() => {
-    localStorage.setItem('language', language);
+    localStorage.setItem('language', language.toUpperCase());
   }, [language]);
 
   const changeLanguage = (newLanguage) => {
-    setLanguage(newLanguage);
+    setLanguage(newLanguage.toUpperCase());
   };
 
   const t = (key) => {
-    return translations[language]?.[key] || translations.EN[key] || key;
+    const lang = language.toUpperCase();
+    return translations[lang]?.[key] || translations.EN[key] || key;
   };
 
   const value = {
@@ -121,7 +138,7 @@ export const LanguageProvider = ({ children }) => {
     t,
     availableLanguages: [
       { code: 'EN', name: 'English' },
-      { code: 'zh-tw', name: '繁體中文' }
+      { code: 'ZH-TW', name: '繁體中文' }
     ]
   };
 

@@ -11,13 +11,10 @@ import {
   Select, 
   MenuItem, 
   Box,
-  IconButton,
-  Chip,
 } from '@mui/material';
 import { DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { format } from 'date-fns';
-import AddIcon from '@mui/icons-material/Add';
-import CloseIcon from '@mui/icons-material/Close';
+
 import { useLanguage } from '../contexts/LanguageContext';
 import { TASK_STATUS, STATUS_TRANSLATIONS } from '../constants/taskConstants';
 import { Storage } from '../utils/storage';
@@ -29,10 +26,12 @@ const TodoForm = ({ open, onClose, onAdd, onEdit, editingTodo }) => {
   const [dueDate, setDueDate] = useState(null);
   const [dueTime, setDueTime] = useState(null);
   const [priority, setPriority] = useState('medium');
-  const [category, setCategory] = useState('personal');
+  const [categories] = useState(() => {
+    const savedCategories = localStorage.getItem('categories');
+    return savedCategories ? JSON.parse(savedCategories) : ['personal', 'work', 'shopping', 'health', 'education'];
+  });
+  const [category, setCategory] = useState(categories[0] || 'personal');
   const [status, setStatus] = useState(TASK_STATUS.TODO);
-  const [customCategory, setCustomCategory] = useState('');
-  const [customCategories, setCustomCategories] = useState(() => Storage.getCustomCategories());
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -55,9 +54,8 @@ const TodoForm = ({ open, onClose, onAdd, onEdit, editingTodo }) => {
     setDueDate(null);
     setDueTime(null);
     setPriority('medium');
-    setCategory('personal');
+    setCategory(categories[0] || 'personal');
     setStatus(TASK_STATUS.TODO);
-    setCustomCategory('');
     setError('');
   };
 
@@ -103,31 +101,7 @@ const TodoForm = ({ open, onClose, onAdd, onEdit, editingTodo }) => {
     onClose();
   };
 
-  const handleAddCustomCategory = () => {
-    if (customCategory.trim() && !customCategories.includes(customCategory.trim())) {
-      const newCategories = [...customCategories, customCategory.trim()];
-      setCustomCategories(newCategories);
-      Storage.setCustomCategories(newCategories);
-      setCategory(customCategory.trim());
-      setCustomCategory('');
-    }
-  };
 
-  const handleRemoveCustomCategory = (categoryToRemove) => {
-    const newCategories = customCategories.filter(cat => cat !== categoryToRemove);
-    setCustomCategories(newCategories);
-    Storage.setCustomCategories(newCategories);
-    if (category === categoryToRemove) {
-      setCategory('personal');
-    }
-  };
-
-  const handleKeyPress = (event) => {
-    if (event.key === 'Enter' && customCategory.trim()) {
-      event.preventDefault();
-      handleAddCustomCategory();
-    }
-  };
 
   return (
     <Dialog 
@@ -203,7 +177,7 @@ const TodoForm = ({ open, onClose, onAdd, onEdit, editingTodo }) => {
             >
               {Object.entries(TASK_STATUS).map(([key, value]) => (
                 <MenuItem key={value} value={value}>
-                  {STATUS_TRANSLATIONS[language][value]}
+                  {STATUS_TRANSLATIONS[language.toUpperCase()][value]}
                 </MenuItem>
               ))}
             </Select>
@@ -216,49 +190,13 @@ const TodoForm = ({ open, onClose, onAdd, onEdit, editingTodo }) => {
               onChange={(e) => setCategory(e.target.value)}
               label={t('category')}
             >
-              <MenuItem value="personal">{t('personal')}</MenuItem>
-              <MenuItem value="work">{t('work')}</MenuItem>
-              <MenuItem value="shopping">{t('shopping')}</MenuItem>
-              <MenuItem value="health">{t('health')}</MenuItem>
-              <MenuItem value="education">{t('education')}</MenuItem>
-              {customCategories.map(cat => (
+              {categories.map(cat => (
                 <MenuItem key={cat} value={cat}>
                   {cat}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
-
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            <TextField
-              label={t('addCategory')}
-              value={customCategory}
-              onChange={(e) => setCustomCategory(e.target.value)}
-              onKeyPress={handleKeyPress}
-              size="small"
-              sx={{ flex: 1 }}
-            />
-            <IconButton 
-              onClick={handleAddCustomCategory}
-              color="primary"
-              disabled={!customCategory.trim()}
-            >
-              <AddIcon />
-            </IconButton>
-          </Box>
-
-          {customCategories.length > 0 && (
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              {customCategories.map(cat => (
-                <Chip
-                  key={cat}
-                  label={cat}
-                  onDelete={() => handleRemoveCustomCategory(cat)}
-                  sx={{ borderRadius: 1 }}
-                />
-              ))}
-            </Box>
-          )}
         </Box>
       </DialogContent>
       <DialogActions>

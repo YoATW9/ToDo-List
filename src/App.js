@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ThemeProvider, 
+  ThemeProvider as MuiThemeProvider,
   CssBaseline, 
   Box, 
   ToggleButton, 
@@ -9,18 +9,15 @@ import {
   Paper, 
   BottomNavigation, 
   BottomNavigationAction,
-  FormControl,
-  Select,
-  MenuItem,
+  IconButton,
 } from '@mui/material';
-import { LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { ToastContainer, toast } from 'react-toastify';
 import AddIcon from '@mui/icons-material/Add';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import PersonIcon from '@mui/icons-material/Person';
+import SettingsIcon from '@mui/icons-material/Settings';
 import 'react-toastify/dist/ReactToastify.css';
 import TodoList from './components/TodoList';
 import TodoForm from './components/TodoForm';
@@ -28,57 +25,20 @@ import TodoCalendar from './components/TodoCalendar';
 import UpcomingView from './components/UpcomingView';
 import NotificationsView from './components/NotificationsView';
 import ProfileView from './components/ProfileView';
-import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
-import { createTheme } from '@mui/material/styles';
+import SettingsDialog from './components/SettingsDialog';
+import { useLanguage } from './contexts/LanguageContext';
+import { useTheme } from './contexts/ThemeContext';
 
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#4B8BF4',
-    },
-    secondary: {
-      main: '#FF5252',
-    },
-    background: {
-      default: '#FFFFFF',
-      paper: '#FFFFFF',
-    }
-  },
-  components: {
-    MuiToggleButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: 20,
-          border: 'none',
-          textTransform: 'none',
-          '&.Mui-selected': {
-            backgroundColor: '#4B8BF4',
-            color: '#FFFFFF',
-            '&:hover': {
-              backgroundColor: '#4B8BF4',
-            },
-          },
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          boxShadow: 'none',
-        },
-      },
-    },
-  },
-});
-
-function AppContent() {
-  const { t, language, changeLanguage, availableLanguages } = useLanguage();
+function App() {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
   const [todos, setTodos] = useState(() => {
     const savedTodos = localStorage.getItem('todos');
     return savedTodos ? JSON.parse(savedTodos) : [];
   });
   const [view, setView] = useState('monthly');
   const [formOpen, setFormOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [bottomNav, setBottomNav] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [editingTodo, setEditingTodo] = useState(null);
@@ -91,10 +51,6 @@ function AppContent() {
     if (newView !== null) {
       setView(newView);
     }
-  };
-
-  const handleLanguageChange = (event) => {
-    changeLanguage(event.target.value);
   };
 
   const addTodo = (todo) => {
@@ -120,20 +76,6 @@ function AppContent() {
   };
 
   const renderCurrentView = () => {
-    if (todos.length === 0) {
-      return (
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center',
-          height: '50vh',
-          color: 'text.secondary'
-        }}>
-          {t('noTasks')}
-        </Box>
-      );
-    }
-
     switch (bottomNav) {
       case 0:
         return view === 'monthly' ? (
@@ -168,7 +110,7 @@ function AppContent() {
           />
         );
       case 3:
-        return <ProfileView todos={todos} />;
+        return <ProfileView todos={todos} onSettingsClick={() => setSettingsOpen(true)} />;
       default:
         return null;
     }
@@ -177,133 +119,172 @@ function AppContent() {
   const shouldShowViewToggle = bottomNav === 0;
 
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
-      <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <Select
-            value={language}
-            onChange={handleLanguageChange}
-            sx={{ borderRadius: 2 }}
-          >
-            {availableLanguages.map(lang => (
-              <MenuItem key={lang.code} value={lang.code}>
-                {lang.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
+    <MuiThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ p: 2, flex: 1, overflow: 'auto', position: 'relative' }}>
+        <IconButton
+          onClick={() => setSettingsOpen(true)}
+          sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            zIndex: 1000
+          }}
+        >
+          <SettingsIcon />
+        </IconButton>
+          {shouldShowViewToggle && (
+            <Box sx={{ 
+              textAlign: 'center', 
+              mb: 3,
+              overflowX: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              msOverflowStyle: '-ms-autohiding-scrollbar',
+              '&::-webkit-scrollbar': {
+                display: 'none'
+              }
+            }}>
+              <ToggleButtonGroup
+                value={view}
+                exclusive
+                onChange={handleViewChange}
+                aria-label="view"
+                sx={{
+                  display: 'inline-flex',
+                  minWidth: 'min-content',
+                  bgcolor: 'action.hover',
+                  p: 0.5,
+                  borderRadius: 30,
+                  '& .MuiToggleButton-root': {
+                    px: 3,
+                    py: 0.5,
+                    whiteSpace: 'nowrap',
+                  },
+                }}
+              >
+                <ToggleButton value="monthly">{t('monthly')}</ToggleButton>
+                <ToggleButton value="daily">{t('daily')}</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+          )}
 
-      <Box sx={{ p: 2, flex: 1, overflow: 'auto' }}>
-        {shouldShowViewToggle && (
-          <Box sx={{ textAlign: 'center', mb: 3 }}>
-            <ToggleButtonGroup
-              value={view}
-              exclusive
-              onChange={handleViewChange}
-              aria-label="view"
+          {renderCurrentView()}
+
+
+        </Box>
+
+        <Box sx={{ height: 65 }} />
+        <Paper 
+          sx={{ 
+            position: 'fixed', 
+            bottom: 0, 
+            left: 0, 
+            right: 0, 
+            zIndex: 1000,
+          }} 
+          elevation={3}
+        >
+          <Box sx={{ position: 'relative' }}>
+            <Fab 
+              color="primary" 
+              size="medium"
+              aria-label={t('addTask')}
+              onClick={() => {
+                setEditingTodo(null);
+                setFormOpen(true);
+              }}
               sx={{
-                bgcolor: '#F5F5F5',
-                p: 0.5,
-                borderRadius: 30,
-                '& .MuiToggleButton-root': {
-                  px: 3,
-                  py: 0.5,
-                },
+                position: 'absolute',
+                top: -20,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 1,
               }}
             >
-              <ToggleButton value="monthly">{t('monthly')}</ToggleButton>
-              <ToggleButton value="daily">{t('daily')}</ToggleButton>
-            </ToggleButtonGroup>
+              <AddIcon />
+            </Fab>
+            <BottomNavigation
+              value={bottomNav}
+              onChange={(event, newValue) => {
+                setBottomNav(newValue);
+              }}
+              showLabels
+              sx={{
+                height: 65,
+                '& .MuiBottomNavigationAction-root': {
+                  minWidth: 'auto',
+                  padding: '6px 8px',
+                },
+                '& .MuiBottomNavigationAction-label': {
+                  fontSize: '0.75rem',
+                  '&.Mui-selected': {
+                    fontSize: '0.75rem'
+                  }
+                },
+                display: 'flex',
+                justifyContent: 'space-between'
+              }}
+            >
+              <BottomNavigationAction label={t('daily')} icon={<ListAltIcon />} />
+              <BottomNavigationAction 
+                label={t('tasks')} 
+                icon={<AccessTimeIcon />}
+                sx={{ mr: 4 }} 
+              />
+              <BottomNavigationAction 
+                label={t('notifications')}
+                sx={{ ml: 4 }}
+                icon={
+                <Box sx={{ position: 'relative' }}>
+                  <NotificationsIcon />
+                  {notifications.length > 0 && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: -8,
+                        right: -8,
+                        bgcolor: 'error.main',
+                        borderRadius: '50%',
+                        width: 16,
+                        height: 16,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.75rem',
+                        color: 'white',
+                      }}
+                    >
+                      {notifications.length}
+                    </Box>
+                  )}
+                </Box>
+              }
+            />
+            <BottomNavigationAction label={t('profile')} icon={<PersonIcon />} />
+            </BottomNavigation>
           </Box>
-        )}
+        </Paper>
 
-        {renderCurrentView()}
+        <TodoForm 
+          open={formOpen} 
+          onClose={() => setFormOpen(false)} 
+          onAdd={addTodo}
+          onEdit={editTodo}
+          editingTodo={editingTodo}
+        />
 
-        <Fab 
-          color="primary" 
-          aria-label={t('addTask')}
-          onClick={() => {
-            setEditingTodo(null);
-            setFormOpen(true);
-          }}
-          sx={{
-            position: 'fixed',
-            bottom: 80,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 56,
-            height: 56,
-          }}
-        >
-          <AddIcon />
-        </Fab>
+        <SettingsDialog
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+        />
+
+        <ToastContainer 
+          position="bottom-right"
+          theme={theme.palette.mode}
+        />
       </Box>
-
-      <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={3}>
-        <BottomNavigation
-          value={bottomNav}
-          onChange={(event, newValue) => {
-            setBottomNav(newValue);
-          }}
-          showLabels
-        >
-          <BottomNavigationAction label={t('daily')} icon={<ListAltIcon />} />
-          <BottomNavigationAction label={t('upcomingTasks')} icon={<AccessTimeIcon />} />
-          <BottomNavigationAction 
-            label={t('notifications')}
-            icon={
-              <Box sx={{ position: 'relative' }}>
-                <NotificationsIcon />
-                {notifications.length > 0 && (
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      top: -8,
-                      right: -8,
-                      bgcolor: 'error.main',
-                      borderRadius: '50%',
-                      width: 16,
-                      height: 16,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.75rem',
-                      color: 'white',
-                    }}
-                  >
-                    {notifications.length}
-                  </Box>
-                )}
-              </Box>
-            }
-          />
-          <BottomNavigationAction label={t('yourProgress')} icon={<PersonIcon />} />
-        </BottomNavigation>
-      </Paper>
-
-      <TodoForm 
-        open={formOpen} 
-        onClose={() => setFormOpen(false)} 
-        onAdd={addTodo}
-        onEdit={editTodo}
-        editingTodo={editingTodo}
-      />
-      <ToastContainer position="bottom-right" />
-    </Box>
-  );
-}
-
-function App() {
-  return (
-    <ThemeProvider theme={theme}>
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <CssBaseline />
-        <LanguageProvider>
-          <AppContent />
-        </LanguageProvider>
-      </LocalizationProvider>
-    </ThemeProvider>
+    </MuiThemeProvider>
   );
 }
 

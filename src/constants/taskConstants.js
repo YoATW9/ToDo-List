@@ -19,7 +19,7 @@ export const STATUS_TRANSLATIONS = {
     [TASK_STATUS.BLOCKED]: 'Blocked',
     [TASK_STATUS.COMPLETED]: 'Completed',
   },
-  'zh-tw': {
+  'ZH-TW': {
     [TASK_STATUS.TODO]: '待辦',
     [TASK_STATUS.IN_PROGRESS]: '進行中',
     [TASK_STATUS.BLOCKED]: '已阻塞',

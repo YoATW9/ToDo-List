@@ -1,24 +1,114 @@
-import React from 'react';
-import { Box, Typography, Paper, IconButton, Tooltip } from '@mui/material';
-import { Delete, AccessTime, Flag, Edit } from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
+import { 
+  Box, 
+  Typography, 
+  Paper, 
+  IconButton, 
+  Tooltip, 
+  List, 
+  ListItem, 
+  ListItemText,
+  TextField,
+  InputAdornment,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+} from '@mui/material';
+import { 
+  Delete, 
+  AccessTime, 
+  Flag, 
+  Edit,
+  Search as SearchIcon,
+  Add as AddIcon
+} from '@mui/icons-material';
 import { format } from 'date-fns';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 
-const priorityColors = {
-  low: '#4CAF50',
-  medium: '#FF9800',
-  high: '#F44336'
-};
-
-const categoryIcons = {
-  personal: '👤',
-  work: '💼',
-  shopping: '🛒',
-  health: '❤️',
-  education: '📚'
+const getPriorityColor = (priority) => {
+  switch (priority) {
+    case 'high': return 'error';
+    case 'medium': return 'warning';
+    case 'low': return 'success';
+    default: return 'default';
+  }
 };
 
 const TodoList = ({ todos, onDelete, onEdit, onEditClick }) => {
-  const sortedTodos = [...todos].sort((a, b) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [categories, setCategories] = useState(() => {
+    const savedCategories = localStorage.getItem('categories');
+    return savedCategories ? JSON.parse(savedCategories) : ['personal', 'work', 'shopping', 'health', 'education'];
+  });
+  const [newCategory, setNewCategory] = useState('');
+  const [editingCategory, setEditingCategory] = useState(null);
+
+  useEffect(() => {
+    localStorage.setItem('categories', JSON.stringify(categories));
+  }, [categories]);
+
+  const handleAddCategory = () => {
+    if (newCategory && !categories.includes(newCategory)) {
+      setCategories([...categories, newCategory]);
+      setNewCategory('');
+    }
+  };
+
+  const handleDeleteCategory = (category) => {
+    if (window.confirm(`Are you sure you want to delete the category "${category}"? Tasks in this category will be moved to the first available category.`)) {
+      const newCategories = categories.filter(c => c !== category);
+      setCategories(newCategories);
+      localStorage.setItem('categories', JSON.stringify(newCategories));
+      
+      // Move tasks to the first available category
+      const defaultCategory = newCategories[0] || 'personal';
+      todos.forEach(todo => {
+        if (todo.category === category) {
+          onEdit(todo.id, { ...todo, category: defaultCategory });
+        }
+      });
+
+      if (filterCategory === category) {
+        setFilterCategory('all');
+      }
+    }
+  };
+
+  const handleEditCategory = (oldCategory, newName) => {
+    if (newName && !categories.includes(newName)) {
+      const newCategories = categories.map(c => c === oldCategory ? newName : c);
+      setCategories(newCategories);
+      localStorage.setItem('categories', JSON.stringify(newCategories));
+      // Update all todos with the old category
+      todos.forEach(todo => {
+        if (todo.category === oldCategory) {
+          onEdit(todo.id, { ...todo, category: newName });
+        }
+      });
+    }
+    setEditingCategory(null);
+  };
+
+  const filteredTodos = todos.filter(todo => {
+    const matchesSearch = 
+      todo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      todo.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      todo.category.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesCategory = filterCategory === 'all' || todo.category === filterCategory;
+
+    return matchesSearch && matchesCategory;
+  });
+
+  const sortedTodos = [...filteredTodos].sort((a, b) => {
     // First sort by completion
     if (a.completed !== b.completed) {
       return a.completed ? 1 : -1;
@@ -32,149 +122,197 @@ const TodoList = ({ todos, onDelete, onEdit, onEditClick }) => {
     return new Date(a.dueDate) - new Date(b.dueDate);
   });
 
+  const uniqueCategories = ['all', ...new Set(todos.map(todo => todo.category))];
+
   return (
-    <Box>
-      {sortedTodos.map(todo => (
-        <Paper
-          key={todo.id}
-          sx={{
-            mb: 1,
-            opacity: todo.completed ? 0.7 : 1,
-            transition: 'all 0.2s',
-            '&:hover': {
-              transform: 'translateX(5px)',
-            },
+    <Box sx={{ p: 2 }}>
+      <Dialog
+        open={editingCategory !== null}
+        onClose={() => setEditingCategory(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>
+          {editingCategory === 'new' ? 'Add Category' : 'Edit Category'}
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            label="Category Name"
+            value={newCategory}
+            onChange={(e) => setNewCategory(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                if (editingCategory === 'new') {
+                  handleAddCategory();
+                } else {
+                  handleEditCategory(editingCategory, newCategory);
+                }
+              }
+            }}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditingCategory(null)}>Cancel</Button>
+          <Button
+            onClick={() => {
+              if (editingCategory === 'new') {
+                handleAddCategory();
+              } else {
+                handleEditCategory(editingCategory, newCategory);
+              }
+            }}
+            variant="contained"
+            disabled={!newCategory.trim()}
+          >
+            {editingCategory === 'new' ? 'Add' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder="Search tasks..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
           }}
-        >
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'flex-start',
-            p: 2,
-          }}>
-            <Box
-              sx={{
-                width: 24,
-                height: 24,
-                borderRadius: '50%',
-                border: '2px solid',
-                borderColor: todo.completed ? priorityColors[todo.priority] : '#E0E0E0',
-                backgroundColor: todo.completed ? priorityColors[todo.priority] : 'transparent',
-                mr: 2,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              onClick={() => onEdit(todo.id, { completed: !todo.completed })}
-            />
-            
-            <Box sx={{ flex: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                <Typography
-                  sx={{
-                    textDecoration: todo.completed ? 'line-through' : 'none',
-                    color: todo.completed ? 'text.secondary' : 'text.primary',
-                  }}
-                >
-                  {todo.title}
-                </Typography>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    ml: 1,
-                    color: 'text.secondary',
-                    fontSize: '1.1rem'
-                  }}
-                >
-                  {categoryIcons[todo.category] || '📝'}
-                </Typography>
-              </Box>
-              
-              {todo.description && (
-                <Typography 
-                  variant="body2" 
-                  color="text.secondary"
-                  sx={{ mb: 1 }}
-                >
-                  {todo.description}
-                </Typography>
-              )}
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                {todo.dueDate && (
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <AccessTime sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
-                    <Typography variant="caption" color="text.secondary">
-                      {format(new Date(todo.dueDate), 'MMM d, h:mm a')}
-                    </Typography>
-                  </Box>
-                )}
-                
-                <Tooltip title={`Priority: ${todo.priority}`}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Flag sx={{ 
-                      fontSize: 16, 
-                      mr: 0.5,
-                      color: priorityColors[todo.priority]
-                    }} />
-                    <Typography 
-                      variant="caption" 
-                      sx={{ color: priorityColors[todo.priority] }}
-                    >
-                      {todo.priority}
-                    </Typography>
-                  </Box>
-                </Tooltip>
-              </Box>
-            </Box>
-
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <IconButton 
-                size="small" 
-                onClick={() => onEditClick(todo)}
-                sx={{ 
-                  color: 'primary.main',
-                  opacity: 0,
-                  transition: 'opacity 0.2s',
-                  '.MuiPaper-root:hover &': {
-                    opacity: 1
-                  }
+          size="small"
+        />
+        <FormControl sx={{ minWidth: 120 }} size="small">
+          <InputLabel>Category</InputLabel>
+          <Select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            label="Category"
+          >
+            <MenuItem value="all">All Categories</MenuItem>
+            {categories.map(category => (
+              <MenuItem key={category} value={category}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <span>{category}</span>
+                  {filterCategory !== category && (
+                    <Box>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingCategory(category);
+                          setNewCategory(category);
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteCategory(category);
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  )}
+                </Box>
+              </MenuItem>
+            ))}
+            <MenuItem>
+              <Button
+                fullWidth
+                startIcon={<AddIcon />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditingCategory('new');
+                  setNewCategory('');
                 }}
               >
-                <Edit fontSize="small" />
-              </IconButton>
+                Add Category
+              </Button>
+            </MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
 
-              <IconButton 
-                size="small" 
-                onClick={() => onDelete(todo.id)}
-                sx={{ 
-                  color: 'error.main',
-                  opacity: 0,
-                  transition: 'opacity 0.2s',
-                  '.MuiPaper-root:hover &': {
-                    opacity: 1
-                  }
-                }}
-              >
-                <Delete fontSize="small" />
-              </IconButton>
-            </Box>
-          </Box>
-        </Paper>
-      ))}
-
-      {todos.length === 0 && (
-        <Typography 
-          color="text.secondary" 
+      {filteredTodos.length === 0 ? (
+        <Paper 
+          elevation={0}
           sx={{ 
-            textAlign: 'center', 
-            mt: 4,
-            fontSize: '1.1rem'
+            p: 4, 
+            textAlign: 'center',
+            bgcolor: 'background.default',
+            borderRadius: 2,
           }}
         >
-          No tasks yet. Click the + button to add one!
-        </Typography>
+          <Typography 
+            variant="h6" 
+            color="text.secondary"
+            sx={{ mb: 1 }}
+          >
+            No tasks yet
+          </Typography>
+          <Typography 
+            variant="body2" 
+            color="text.secondary"
+          >
+            Click the + button to add one!
+          </Typography>
+        </Paper>
+      ) : (
+        <List>
+          {sortedTodos.map(todo => (
+            <ListItem
+              key={todo.id}
+              sx={{
+                mb: 1,
+                bgcolor: 'background.paper',
+                borderRadius: 1,
+                borderLeft: `4px solid ${getPriorityColor(todo.priority)}.main`,
+                '&:hover': {
+                  bgcolor: 'action.hover',
+                },
+              }}
+              secondaryAction={
+                <Box>
+                  <IconButton 
+                    edge="end" 
+                    aria-label="edit"
+                    onClick={() => onEditClick(todo)}
+                    sx={{ mr: 1 }}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton 
+                    edge="end" 
+                    aria-label="delete"
+                    onClick={() => onDelete(todo.id)}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+              }
+            >
+              <ListItemText
+                primary={todo.title}
+                secondary={todo.description}
+                sx={{
+                  '& .MuiListItemText-primary': {
+                    fontWeight: 500,
+                  },
+                }}
+              />
+            </ListItem>
+          ))}
+        </List>
       )}
     </Box>
   );
